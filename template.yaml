@@ -1,45 +1,65 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: >
-  photo-processing
 
-  Sample SAM Template for photo-processing
-
-# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
-Globals:
-  Function:
-    Timeout: 3
-    MemorySize: 128
-
-    # You can add LoggingConfig parameters such as the Logformat, Log Group, and SystemLogLevel or ApplicationLogLevel. Learn more here https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-function.html#sam-function-loggingconfig.
-    LoggingConfig:
-      LogFormat: JSON
 Resources:
-  HelloWorldFunction:
-    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+  ## S3 Buckets
+  RawPhotosBucket:
+    Type: AWS::S3::Bucket
     Properties:
-      CodeUri: hello_world/
+      BucketName: !Sub "mjburns-raw-photos"
+
+  ProcessedPhotosBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "mjburns-processed-photos"
+
+  ## Lambda Layer for multiwatermark
+  MultiWatermarkLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: MultiWatermarkLayer
+      Description: "Lambda Layer for multiwatermark library"
+      ContentUri: layer/
+      CompatibleRuntimes:
+        - python3.9
+      RetentionPolicy: Retain
+
+  ## Lambda Function for Image Processing
+  PhotoProcessingLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: PhotoProcessingFunction
       Handler: app.lambda_handler
       Runtime: python3.9
-      Architectures:
-      - x86_64
+      CodeUri: photo_processing
+      MemorySize: 512
+      Timeout: 30
+      Layers:
+        - !Ref MultiWatermarkLayer
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref RawPhotosBucket
+        - S3WritePolicy:
+            BucketName: !Ref ProcessedPhotosBucket
+      Environment:
+        Variables:
+          PROCESSED_BUCKET: !Ref ProcessedPhotosBucket
       Events:
-        HelloWorld:
-          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+        S3Event:
+          Type: S3
           Properties:
-            Path: /hello
-            Method: get
+            Bucket: !Ref RawPhotosBucket
+            Events: s3:ObjectCreated:*
 
 Outputs:
-  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
-  # Find out more about other implicit resources you can reference within SAM
-  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
-  HelloWorldApi:
-    Description: API Gateway endpoint URL for Prod stage for Hello World function
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
-  HelloWorldFunction:
-    Description: Hello World Lambda Function ARN
-    Value: !GetAtt HelloWorldFunction.Arn
-  HelloWorldFunctionIamRole:
-    Description: Implicit IAM Role created for Hello World function
-    Value: !GetAtt HelloWorldFunctionRole.Arn
+  RawPhotosBucketName:
+    Description: "S3 bucket for raw photos"
+    Value: !Ref RawPhotosBucket
+
+  ProcessedPhotosBucketName:
+    Description: "S3 bucket for processed photos"
+    Value: !Ref ProcessedPhotosBucket
+
+  LambdaFunctionArn:
+    Description: "ARN of the Photo Processing Lambda function"
+    Value: !GetAtt PhotoProcessingLambda.Arn
