@@ -44,12 +44,6 @@ Resources:
       Environment:
         Variables:
           PROCESSED_BUCKET: !Ref ProcessedPhotosBucket
-      Events:
-        S3Event:
-          Type: S3
-          Properties:
-            Bucket: !Ref RawPhotosBucket
-            Events: s3:ObjectCreated:*
 
 Outputs:
   RawPhotosBucketName:
