@@ -7,16 +7,9 @@ sam deploy --guided
 ```
 
 ### After Initial Deployment
-*This is to avoid circular dependencies in the sam template*
+add s3 event to lambda config
 
+## add to lambda layer
 ```
-aws s3api put-bucket-notification-configuration --bucket mjburns-raw-photos --notification-configuration '{
-  "LambdaFunctionConfigurations": [
-    {
-      "LambdaFunctionArn": "arn:aws:lambda:us-east-1:911167921393:function:PhotoProcessingFunction",
-      "Events": ["s3:ObjectCreated:*"]
-    }
-  ]
-}'
-
+pip3 install --target layer/python/lib/python3.9/site-packages <PACKAGE> --platform manylinux2014_x86_64 --only-binary=:all: --upgrade   
 ```

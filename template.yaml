@@ -13,15 +13,15 @@ Resources:
     Properties:
       BucketName: !Sub "mjburns-processed-photos"
 
-  ## Lambda Layer for multiwatermark
-  MultiWatermarkLayer:
+  ## Lambda Layer for pillow
+  PillowLayer:
     Type: AWS::Serverless::LayerVersion
     Properties:
       LayerName: MultiWatermarkLayer
       Description: "Lambda Layer for multiwatermark library"
       ContentUri: layer/
       CompatibleRuntimes:
-        - python3.9
+        - python3.13
       RetentionPolicy: Retain
 
   ## Lambda Function for Image Processing
@@ -30,12 +30,12 @@ Resources:
     Properties:
       FunctionName: PhotoProcessingFunction
       Handler: app.lambda_handler
-      Runtime: python3.9
+      Runtime: python3.13
       CodeUri: photo_processing
       MemorySize: 512
       Timeout: 30
       Layers:
-        - !Ref MultiWatermarkLayer
+        - !Ref PillowLayer
       Policies:
         - S3ReadPolicy:
             BucketName: !Ref RawPhotosBucket
